@@ -201,8 +201,6 @@ export async function POST(req: Request) {
       }
     ];
 
-    let lastError = '';
-
     // Loop through provider pool with silent auto-skip on failure/limit
     for (const provider of providers) {
       if (!provider.apiKey || provider.apiKey.trim() === '') continue;
@@ -235,12 +233,9 @@ export async function POST(req: Request) {
           if (reply && reply.trim().length > 0) {
             return NextResponse.json({ reply: reply.trim() });
           }
-        } else {
-          const errData = await res.json().catch(() => null);
-          lastError = errData?.error?.message || `HTTP ${res.status}`;
         }
-      } catch (err: unknown) {
-        lastError = (err as Error)?.message || 'Timeout / Network Error';
+      } catch {
+        // Silent failover
       }
     }
 

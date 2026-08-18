@@ -36,7 +36,6 @@ import {
   Heart,
   Code,
   Globe,
-  Terminal,
   Menu,
   LogIn,
   LogOut,
@@ -391,7 +390,7 @@ function MachiApp() {
   };
 
   const handleSendMessage = async (customText?: string) => {
-    let rawText = customText || input;
+    const rawText = customText || input;
     if (!rawText.trim() && !attachedFile) return;
     if (isLoading || !activeThreadId) return;
 

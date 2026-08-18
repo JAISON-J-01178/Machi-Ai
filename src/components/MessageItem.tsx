@@ -143,6 +143,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onRegenerate,
       parts.push(
         <div key={`img-${match.index}`} className="my-4 rounded-2xl overflow-hidden border border-[#3f3f46] bg-[#09090b] max-w-md shadow-xl group relative">
           <div className="relative w-full h-72 sm:h-80 bg-zinc-950">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imgUrl}
               alt={altText}
