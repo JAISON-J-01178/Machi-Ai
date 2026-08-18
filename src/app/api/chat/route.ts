@@ -244,22 +244,17 @@ export async function POST(req: Request) {
       }
     }
 
-    // ── 4. ZERO-KEY FREE AI FALLBACK POOL (Pollinations AI) ────────────────
-    // Ensures Machi AI responds even if ALL API keys hit 429 rate limit or network is slow
+    // ── 4. ZERO-KEY FREE AI FALLBACK POOL (Pollinations AI GET) ─────────────
+    // Guarantees Machi AI responds even if ALL API keys hit 429 rate limits or network is slow
     try {
-      const pollRes = await fetch('https://text.pollinations.ai/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: formattedMessages,
-          seed: Date.now(),
-          model: 'openai'
-        })
-      });
+      const promptToUse = lastMessage.slice(0, 1500);
+      const pollUrl = `https://text.pollinations.ai/${encodeURIComponent(promptToUse)}?system=${encodeURIComponent(fullSystemPrompt)}&model=openai&seed=${Date.now()}`;
+      
+      const pollRes = await fetch(pollUrl, { method: 'GET' });
 
       if (pollRes.ok) {
         const pollText = await pollRes.text();
-        if (pollText && pollText.trim().length > 0) {
+        if (pollText && pollText.trim().length > 0 && !pollText.includes('Internal Server Error')) {
           return NextResponse.json({ reply: pollText.trim() });
         }
       }
