@@ -40,7 +40,6 @@ import {
   LogIn,
   LogOut,
   Download,
-  Languages,
   Paperclip,
   FileText,
   X,
@@ -58,14 +57,12 @@ interface AttachedFile {
    INLINE HEADER
 ────────────────────────────────────────────── */
 interface AppHeaderProps {
-  language: string;
-  setLanguage: (l: string) => void;
   onOpenAuth: () => void;
   onToggleSidebar: () => void;
   onOpenExport: () => void;
 }
 
-function AppHeader({ language, setLanguage, onOpenAuth, onToggleSidebar, onOpenExport }: AppHeaderProps) {
+function AppHeader({ onOpenAuth, onToggleSidebar, onOpenExport }: AppHeaderProps) {
   const { user, logout } = useAuth();
 
   return (
@@ -84,24 +81,6 @@ function AppHeader({ language, setLanguage, onOpenAuth, onToggleSidebar, onOpenE
           </div>
           <span className="text-sm font-bold text-zinc-100 tracking-tight hidden sm:inline">Machi AI</span>
         </div>
-      </div>
-
-      {/* Middle: Language Selector */}
-      <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl p-0.5 text-[11px] font-semibold overflow-hidden">
-        <Languages className="w-3 h-3 text-zinc-400 ml-1 mr-0.5 hidden sm:inline flex-shrink-0" />
-        {(['auto', 'en', 'tanglish', 'ta'] as const).map((lang) => (
-          <button
-            key={lang}
-            onClick={() => setLanguage(lang)}
-            className={`px-2 py-1 rounded-lg transition-all whitespace-nowrap ${
-              language === lang
-                ? 'bg-white text-zinc-950 font-bold shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-100'
-            }`}
-          >
-            {lang === 'auto' ? 'Auto' : lang === 'en' ? 'English' : lang === 'tanglish' ? 'Tanglish' : 'தமிழ்'}
-          </button>
-        ))}
       </div>
 
       {/* Right: Export + Auth */}
@@ -575,8 +554,6 @@ function MachiApp() {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
           <AppHeader
-            language={language}
-            setLanguage={setLanguage}
             onOpenAuth={() => setShowAuthModal(true)}
             onToggleSidebar={handleToggleSidebar}
             onOpenExport={() => setShowExportModal(true)}
