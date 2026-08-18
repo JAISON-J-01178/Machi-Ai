@@ -115,13 +115,13 @@ export async function POST(req: Request) {
 
     const lastMessage = messages[messages.length - 1]?.content || '';
 
-    // ── 1. IMAGE GENERATION HANDLER ─────────────────────────────────────────
+    // ── 1. IMAGE GENERATION HANDLER (Gemini / Flux Model) ───────────────────
     if (isImageGenRequest(lastMessage)) {
       const cleanPrompt = extractImagePrompt(lastMessage) || 'futuristic artwork';
       const encodedPrompt = encodeURIComponent(cleanPrompt);
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=flux&width=1024&height=1024&nologo=true&seed=${Date.now()}`;
 
-      const replyText = `Here is your generated AI artwork for **"${cleanPrompt}"**:\n\n![${cleanPrompt}](${imageUrl})`;
+      const replyText = `Here is your generated AI artwork (Gemini/Flux) for **"${cleanPrompt}"**:\n\n![${cleanPrompt}](${imageUrl})`;
       return NextResponse.json({ reply: replyText });
     }
 
@@ -144,62 +144,102 @@ export async function POST(req: Request) {
 
     const fullSystemPrompt = `${baseSystemPrompt}${nameInstruction}${languageInstruction}`;
 
+    const hasAttachedImage = messages.some(
+      (m: ChatMessage) => typeof m.content === 'string' && m.content.includes('[IMAGE_DATA_URL:')
+    );
+
     const formattedMessages = [
       { role: 'system', content: fullSystemPrompt },
-      ...messages.map((m: ChatMessage) => ({
-        role: m.role,
-        content: m.content
-      }))
+      ...messages.map((m: ChatMessage) => {
+        if (typeof m.content === 'string' && m.content.includes('[IMAGE_DATA_URL:')) {
+          const parts = m.content.split('[IMAGE_DATA_URL:');
+          const textPart = parts[0].trim();
+          const imageUrl = parts[1] ? parts[1].replace(']', '').trim() : '';
+
+          if (imageUrl) {
+            return {
+              role: m.role,
+              content: [
+                { type: 'text', text: textPart || 'Please analyze and describe what is shown in this uploaded image.' },
+                { type: 'image_url', image_url: { url: imageUrl } }
+              ]
+            };
+          }
+        }
+        return {
+          role: m.role,
+          content: m.content
+        };
+      })
     ];
 
     // ── 3. EXPANDED MULTI-PROVIDER FAILOVER POOL ─────────────────────────────
-    const providers = [
-      // Groq Provider Pool (Ultra Fast - Live Verified Models)
-      {
-        name: 'Groq Compound',
-        url: 'https://api.groq.com/openai/v1/chat/completions',
-        apiKey: process.env.GROQ_API_KEY || '',
-        model: 'groq/compound'
-      },
-      {
-        name: 'Groq Compound Mini',
-        url: 'https://api.groq.com/openai/v1/chat/completions',
-        apiKey: process.env.GROQ_API_KEY || '',
-        model: 'groq/compound-mini'
-      },
-      {
-        name: 'Groq Qwen 3.6',
-        url: 'https://api.groq.com/openai/v1/chat/completions',
-        apiKey: process.env.GROQ_API_KEY || '',
-        model: 'qwen/qwen3.6-27b'
-      },
-      {
-        name: 'Groq GPT OSS 120B',
-        url: 'https://api.groq.com/openai/v1/chat/completions',
-        apiKey: process.env.GROQ_API_KEY || '',
-        model: 'openai/gpt-oss-120b'
-      },
-      // OpenRouter Provider Pool (Live Verified Models)
-      {
-        name: 'OpenRouter Auto',
-        url: 'https://openrouter.ai/api/v1/chat/completions',
-        apiKey: process.env.OPENROUTER_API_KEY || '',
-        model: 'openrouter/auto'
-      },
-      {
-        name: 'OpenRouter Meta Llama 3.3',
-        url: 'https://openrouter.ai/api/v1/chat/completions',
-        apiKey: process.env.OPENROUTER_API_KEY || '',
-        model: 'meta-llama/llama-3.3-70b-instruct:free'
-      },
-      // OpenAI Provider
-      {
-        name: 'OpenAI GPT-4o Mini',
-        url: 'https://api.openai.com/v1/chat/completions',
-        apiKey: process.env.OPENAI_API_KEY || '',
-        model: 'gpt-4o-mini'
-      }
-    ];
+    // Prioritize OpenAI GPT-4o Mini if image vision analysis is requested
+    const providers = hasAttachedImage
+      ? [
+          {
+            name: 'OpenAI GPT-4o Mini (Vision)',
+            url: 'https://api.openai.com/v1/chat/completions',
+            apiKey: process.env.OPENAI_API_KEY || '',
+            model: 'gpt-4o-mini'
+          },
+          {
+            name: 'Groq Compound',
+            url: 'https://api.groq.com/openai/v1/chat/completions',
+            apiKey: process.env.GROQ_API_KEY || '',
+            model: 'groq/compound'
+          },
+          {
+            name: 'OpenRouter Auto',
+            url: 'https://openrouter.ai/api/v1/chat/completions',
+            apiKey: process.env.OPENROUTER_API_KEY || '',
+            model: 'openrouter/auto'
+          }
+        ]
+      : [
+          {
+            name: 'Groq Compound',
+            url: 'https://api.groq.com/openai/v1/chat/completions',
+            apiKey: process.env.GROQ_API_KEY || '',
+            model: 'groq/compound'
+          },
+          {
+            name: 'Groq Compound Mini',
+            url: 'https://api.groq.com/openai/v1/chat/completions',
+            apiKey: process.env.GROQ_API_KEY || '',
+            model: 'groq/compound-mini'
+          },
+          {
+            name: 'Groq Qwen 3.6',
+            url: 'https://api.groq.com/openai/v1/chat/completions',
+            apiKey: process.env.GROQ_API_KEY || '',
+            model: 'qwen/qwen3.6-27b'
+          },
+          {
+            name: 'Groq GPT OSS 120B',
+            url: 'https://api.groq.com/openai/v1/chat/completions',
+            apiKey: process.env.GROQ_API_KEY || '',
+            model: 'openai/gpt-oss-120b'
+          },
+          {
+            name: 'OpenRouter Auto',
+            url: 'https://openrouter.ai/api/v1/chat/completions',
+            apiKey: process.env.OPENROUTER_API_KEY || '',
+            model: 'openrouter/auto'
+          },
+          {
+            name: 'OpenRouter Meta Llama 3.3',
+            url: 'https://openrouter.ai/api/v1/chat/completions',
+            apiKey: process.env.OPENROUTER_API_KEY || '',
+            model: 'meta-llama/llama-3.3-70b-instruct:free'
+          },
+          {
+            name: 'OpenAI GPT-4o Mini',
+            url: 'https://api.openai.com/v1/chat/completions',
+            apiKey: process.env.OPENAI_API_KEY || '',
+            model: 'gpt-4o-mini'
+          }
+        ];
 
     // Loop through provider pool with silent auto-skip on failure/limit
     for (const provider of providers) {

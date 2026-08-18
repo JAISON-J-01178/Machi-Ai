@@ -275,7 +275,12 @@ function MachiApp() {
     try {
       let extractedText = '';
       if (file.type.startsWith('image/')) {
-        extractedText = `[Uploaded Image: ${file.name} (${file.type}, ${(file.size / 1024).toFixed(1)} KB)]`;
+        const reader = new FileReader();
+        extractedText = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
       } else {
         extractedText = await file.text();
         // Limit document snippet size to prevent overflow
@@ -291,7 +296,7 @@ function MachiApp() {
         type: file.type
       });
     } catch {
-      alert('Could not read file content. Please upload plain text, code, PDF, or document files.');
+      alert('Could not read file content. Please upload plain text, code, PDF, image, or document files.');
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -394,10 +399,14 @@ function MachiApp() {
     if (!rawText.trim() && !attachedFile) return;
     if (isLoading || !activeThreadId) return;
 
-    // Attach file context if present
+    // Attach file context or base64 image data URL
     let promptContent = rawText.trim();
     if (attachedFile) {
-      promptContent = `[ATTACHED FILE: ${attachedFile.name}]\n\n--- FILE CONTENT ---\n${attachedFile.text}\n--- END FILE ---\n\n${promptContent || 'Please summarize and explain this uploaded document.'}`;
+      if (attachedFile.type.startsWith('image/')) {
+        promptContent = `${promptContent || 'Please analyze and describe what is shown in this uploaded image.'}\n\n[IMAGE_DATA_URL:${attachedFile.text}]`;
+      } else {
+        promptContent = `[ATTACHED FILE: ${attachedFile.name}]\n\n--- FILE CONTENT ---\n${attachedFile.text}\n--- END FILE ---\n\n${promptContent || 'Please summarize and explain this uploaded document.'}`;
+      }
     }
 
     const userMsg: Message = {
