@@ -119,7 +119,8 @@ export async function POST(req: Request) {
     if (isImageGenRequest(lastMessage)) {
       const cleanPrompt = extractImagePrompt(lastMessage) || 'futuristic artwork';
       const encodedPrompt = encodeURIComponent(cleanPrompt);
-      const imageUrl = `https://gen.pollinations.ai/image/${encodedPrompt}?model=zimage&width=1024&height=1024&seed=${Date.now()}`;
+      const randomSeed = Math.floor(Math.random() * 2147483647);
+      const imageUrl = `https://gen.pollinations.ai/image/${encodedPrompt}?model=zimage&width=1024&height=1024&seed=${randomSeed}`;
 
       const replyText = `Here is your generated AI artwork for **"${cleanPrompt}"**:\n\n![${cleanPrompt}](${imageUrl})`;
       return NextResponse.json({ reply: replyText });
@@ -283,7 +284,8 @@ export async function POST(req: Request) {
     // Guarantees Machi AI responds even if ALL API keys hit 429 rate limits or network is slow
     try {
       const promptToUse = lastMessage.slice(0, 1500);
-      const pollUrl = `https://text.pollinations.ai/${encodeURIComponent(promptToUse)}?system=${encodeURIComponent(fullSystemPrompt)}&model=openai&seed=${Date.now()}`;
+      const randomSeed = Math.floor(Math.random() * 2147483647);
+      const pollUrl = `https://text.pollinations.ai/${encodeURIComponent(promptToUse)}?system=${encodeURIComponent(fullSystemPrompt)}&model=openai&seed=${randomSeed}`;
       
       const pollRes = await fetch(pollUrl, { method: 'GET' });
 
