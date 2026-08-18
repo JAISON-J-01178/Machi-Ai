@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, User, Edit2, Volume2, VolumeX, Download, ExternalLink } from 'lucide-react';
+import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, User, Edit2, Volume2, VolumeX, Download, ExternalLink, FileText, Presentation } from 'lucide-react';
+import { downloadPdfDocument, downloadPptPresentation, downloadImageFormat } from '@/lib/documentExporter';
 
 export interface Message {
   id: string;
@@ -55,7 +56,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onRegenerate,
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
 
-    // Detect language: Tamil / English
     const containsTamil = /[\u0B80-\u0BFF]/.test(cleanText);
     const voices = window.speechSynthesis.getVoices();
     if (containsTamil) {
@@ -79,7 +79,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onRegenerate,
   }, []);
 
   const renderFormattedContent = (content: string) => {
-    // 1. Detect markdown images ![alt](url)
+    // Detect markdown images ![alt](url)
     const imageRegex = /!\[(.*?)\]\((.*?)\)/g;
     const parts: React.ReactNode[] = [];
     let lastIdx = 0;
@@ -151,9 +151,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onRegenerate,
               loading="lazy"
             />
           </div>
-          <div className="p-3 bg-[#18181b] border-t border-[#27272a] flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-zinc-200 truncate">{altText}</span>
-            <div className="flex items-center gap-2">
+          <div className="p-3 bg-[#18181b] border-t border-[#27272a] flex items-center justify-between gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-zinc-200 truncate max-w-[140px]">{altText}</span>
+            <div className="flex items-center gap-1.5">
               <a
                 href={imgUrl}
                 target="_blank"
@@ -163,16 +163,22 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onRegenerate,
               >
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
-              <a
-                href={imgUrl}
-                download={`machi-ai-artwork-${Date.now()}.png`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white text-zinc-950 font-bold text-xs hover:bg-zinc-200 transition-colors shadow-sm"
+              <button
+                onClick={() => downloadImageFormat(imgUrl, 'png')}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white text-zinc-950 font-bold text-xs hover:bg-zinc-200 transition-colors shadow-sm"
+                title="Download PNG image"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Download</span>
-              </a>
+                <span>PNG</span>
+              </button>
+              <button
+                onClick={() => downloadImageFormat(imgUrl, 'jpg')}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-zinc-800 text-zinc-200 font-bold text-xs hover:bg-zinc-700 transition-colors shadow-sm"
+                title="Download JPG image"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>JPG</span>
+              </button>
             </div>
           </div>
         </div>
@@ -235,7 +241,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onRegenerate,
 
         {/* Action Toolbar for AI responses */}
         {!isUser && (
-          <div className="flex items-center gap-3 mt-3 pt-2 border-t border-[#27272a] text-[#a1a1aa] text-xs flex-wrap">
+          <div className="flex items-center gap-2.5 mt-3 pt-2 border-t border-[#27272a] text-[#a1a1aa] text-xs flex-wrap">
             {/* Copy Button */}
             <button
               onClick={handleCopy}
@@ -253,6 +259,26 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onRegenerate,
                   <span>Copy</span>
                 </>
               )}
+            </button>
+
+            {/* Export PDF Button */}
+            <button
+              onClick={() => downloadPdfDocument('Machi_AI_Document', message.content)}
+              className="flex items-center gap-1 px-2 py-1 rounded-md hover:text-[#fafafa] hover:bg-[#27272a] transition-colors"
+              title="Export as PDF Document"
+            >
+              <FileText className="w-3.5 h-3.5 text-cyan-400" />
+              <span>PDF</span>
+            </button>
+
+            {/* Export PPT Presentation Button */}
+            <button
+              onClick={() => downloadPptPresentation('Machi_AI_Presentation', message.content)}
+              className="flex items-center gap-1 px-2 py-1 rounded-md hover:text-[#fafafa] hover:bg-[#27272a] transition-colors"
+              title="Export as PPT Presentation"
+            >
+              <Presentation className="w-3.5 h-3.5 text-amber-400" />
+              <span>PPT</span>
             </button>
 
             {/* Voice Reader Button */}

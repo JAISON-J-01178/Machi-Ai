@@ -43,7 +43,8 @@ import {
   Paperclip,
   FileText,
   X,
-  ImageIcon
+  ImageIcon,
+  Presentation
 } from 'lucide-react';
 
 interface AttachedFile {
@@ -510,9 +511,9 @@ function MachiApp() {
   };
 
   const prompts = [
-    { icon: ImageIcon, lang: 'AI Image', text: 'Generate image of a futuristic Cyberpunk city in Tamil Nadu' },
-    { icon: Globe, lang: 'English', text: 'Help me draft a professional email response for a client meeting.' },
-    { icon: Heart, lang: 'Tanglish', text: 'Machi, life la focus & motivation vara oru simple Tanglish advice thaa da!' },
+    { icon: ImageIcon, lang: 'PNG / JPG Image', text: 'Generate image of a futuristic Cyberpunk city in Tamil Nadu' },
+    { icon: Presentation, lang: 'PPT Slides', text: 'Create a 5-slide PPT presentation on Artificial Intelligence trends' },
+    { icon: FileText, lang: 'PDF Report', text: 'Generate a detailed PDF project proposal report' },
     { icon: Code, lang: 'Coding', text: 'Explain React custom hooks with a code example.' }
   ];
 
