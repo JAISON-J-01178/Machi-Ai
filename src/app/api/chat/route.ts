@@ -45,6 +45,7 @@ Rules for your personality:
 - Respond in natural English, Tanglish (Tamil written in English script), or Pure Tamil based on user input.
 - Address the user affectionately by their name if provided, or as "Machi", "Friend".
 - Be warm, encouraging, smart, and highly helpful.
+- If attached document/file content is present, analyze and explain it thoroughly.
 ${CREATOR_IDENTITY_INSTRUCTION}`,
 
   cinema: `You are "Machi AI" (Cinema & Meme Persona)!
@@ -61,9 +62,44 @@ ${CREATOR_IDENTITY_INSTRUCTION}`,
 
   pro: `You are "Machi AI" (Professional & Smart Persona)!
 Rules for your personality:
-- Provide clean, highly structured, precise answers for coding, work, translation, and technical queries.
+- Provide clean, highly structured, precise answers for coding, work, document analysis, translation, and technical queries.
 ${CREATOR_IDENTITY_INSTRUCTION}`
 };
+
+// Check if user request is asking for image generation
+function isImageGenRequest(text: string): boolean {
+  const q = text.toLowerCase();
+  return (
+    q.includes('generate image') ||
+    q.includes('create image') ||
+    q.includes('draw image') ||
+    q.includes('make image') ||
+    q.includes('generate picture') ||
+    q.includes('create picture') ||
+    q.includes('draw picture') ||
+    q.includes('generate photo') ||
+    q.includes('create photo') ||
+    q.startsWith('draw ') ||
+    q.startsWith('generate image of') ||
+    q.startsWith('create image of')
+  );
+}
+
+// Clean prompt to extract image description
+function extractImagePrompt(text: string): string {
+  return text
+    .replace(/generate image of/gi, '')
+    .replace(/create image of/gi, '')
+    .replace(/draw image of/gi, '')
+    .replace(/make an image of/gi, '')
+    .replace(/generate picture of/gi, '')
+    .replace(/create picture of/gi, '')
+    .replace(/generate image/gi, '')
+    .replace(/create image/gi, '')
+    .replace(/draw a /gi, '')
+    .replace(/draw /gi, '')
+    .trim();
+}
 
 export async function POST(req: Request) {
   try {
@@ -77,8 +113,21 @@ export async function POST(req: Request) {
       );
     }
 
+    const lastMessage = messages[messages.length - 1]?.content || '';
+
+    // ── 1. IMAGE GENERATION HANDLER ─────────────────────────────────────────
+    if (isImageGenRequest(lastMessage)) {
+      const cleanPrompt = extractImagePrompt(lastMessage) || 'futuristic artwork';
+      const encodedPrompt = encodeURIComponent(cleanPrompt);
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
+
+      const replyText = `Here is your generated AI artwork for **"${cleanPrompt}"**:\n\n![${cleanPrompt}](${imageUrl})`;
+      return NextResponse.json({ reply: replyText });
+    }
+
+    // ── 2. SYSTEM PROMPT SETUP ──────────────────────────────────────────────
     const baseSystemPrompt = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.chill;
-    
+
     let nameInstruction = '';
     if (userName && userName !== 'Mach User') {
       nameInstruction = `\nThe user's name is "${userName}". Address them warmly as "${userName}"!`;
@@ -103,36 +152,64 @@ export async function POST(req: Request) {
       }))
     ];
 
-    // Multi-Provider Silent Failover Pool
+    // ── 3. EXPANDED MULTI-PROVIDER FAILOVER POOL ─────────────────────────────
     const providers = [
+      // Groq Provider Pool (Ultra Fast)
       {
+        name: 'Groq Llama 3.3 70B',
         url: 'https://api.groq.com/openai/v1/chat/completions',
         apiKey: process.env.GROQ_API_KEY || '',
         model: 'llama-3.3-70b-versatile'
       },
       {
+        name: 'Groq Llama 3 8B',
+        url: 'https://api.groq.com/openai/v1/chat/completions',
+        apiKey: process.env.GROQ_API_KEY || '',
+        model: 'llama3-8b-8192'
+      },
+      {
+        name: 'Groq Mixtral',
+        url: 'https://api.groq.com/openai/v1/chat/completions',
+        apiKey: process.env.GROQ_API_KEY || '',
+        model: 'mixtral-8x7b-32768'
+      },
+      // OpenAI Provider
+      {
+        name: 'OpenAI GPT-4o Mini',
         url: 'https://api.openai.com/v1/chat/completions',
         apiKey: process.env.OPENAI_API_KEY || '',
         model: 'gpt-4o-mini'
       },
+      // OpenRouter Provider Pool (Free Tier)
       {
+        name: 'OpenRouter Llama 3.3',
         url: 'https://openrouter.ai/api/v1/chat/completions',
         apiKey: process.env.OPENROUTER_API_KEY || '',
         model: 'meta-llama/llama-3.3-70b-instruct:free'
       },
       {
-        url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-        apiKey: process.env.GEMINI_API_KEY || '',
-        model: 'gemini-1.5-flash'
+        name: 'OpenRouter Gemini Flash Lite',
+        url: 'https://openrouter.ai/api/v1/chat/completions',
+        apiKey: process.env.OPENROUTER_API_KEY || '',
+        model: 'google/gemini-2.0-flash-lite-preview-02-05:free'
+      },
+      {
+        name: 'OpenRouter DeepSeek R1',
+        url: 'https://openrouter.ai/api/v1/chat/completions',
+        apiKey: process.env.OPENROUTER_API_KEY || '',
+        model: 'deepseek/deepseek-r1:free'
       }
     ];
 
+    let lastError = '';
+
+    // Loop through provider pool with silent auto-skip on failure/limit
     for (const provider of providers) {
       if (!provider.apiKey || provider.apiKey.trim() === '') continue;
 
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 14000);
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
 
         const res = await fetch(provider.url, {
           method: 'POST',
@@ -158,14 +235,41 @@ export async function POST(req: Request) {
           if (reply && reply.trim().length > 0) {
             return NextResponse.json({ reply: reply.trim() });
           }
+        } else {
+          const errData = await res.json().catch(() => null);
+          lastError = errData?.error?.message || `HTTP ${res.status}`;
         }
-      } catch {
-        // Silent failover
+      } catch (err: unknown) {
+        lastError = (err as Error)?.message || 'Timeout / Network Error';
       }
     }
 
+    // ── 4. ZERO-KEY FREE AI FALLBACK POOL (Pollinations AI) ────────────────
+    // Ensures Machi AI responds even if ALL API keys hit 429 rate limit or network is slow
+    try {
+      const pollRes = await fetch('https://text.pollinations.ai/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: formattedMessages,
+          seed: Date.now(),
+          model: 'openai'
+        })
+      });
+
+      if (pollRes.ok) {
+        const pollText = await pollRes.text();
+        if (pollText && pollText.trim().length > 0) {
+          return NextResponse.json({ reply: pollText.trim() });
+        }
+      }
+    } catch {
+      // Fallback exception
+    }
+
+    // ── 5. EXHAUSTED LIMIT MESSAGE ─────────────────────────────────────────
     return NextResponse.json({
-      reply: `Machi AI connection slow ah iruku. Retry in 2 seconds! 🚀`
+      reply: `Today your daily primary AI request limit is reached or network is slow. Please try again in a few moments or refresh! 🚀`
     });
 
   } catch (err: unknown) {
