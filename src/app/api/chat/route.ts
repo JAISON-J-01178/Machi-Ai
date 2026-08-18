@@ -115,13 +115,13 @@ export async function POST(req: Request) {
 
     const lastMessage = messages[messages.length - 1]?.content || '';
 
-    // ── 1. IMAGE GENERATION HANDLER (Gemini / Flux Model) ───────────────────
+    // ── 1. NATIVE MACHI AI IMAGE GENERATION HANDLER ─────────────────────────
     if (isImageGenRequest(lastMessage)) {
       const cleanPrompt = extractImagePrompt(lastMessage) || 'futuristic artwork';
       const encodedPrompt = encodeURIComponent(cleanPrompt);
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=flux&width=1024&height=1024&nologo=true&seed=${Date.now()}`;
+      const imageUrl = `https://gen.pollinations.ai/image/${encodedPrompt}?model=zimage&width=1024&height=1024&seed=${Date.now()}`;
 
-      const replyText = `Here is your generated AI artwork (Gemini/Flux) for **"${cleanPrompt}"**:\n\n![${cleanPrompt}](${imageUrl})`;
+      const replyText = `Here is your generated AI artwork for **"${cleanPrompt}"**:\n\n![${cleanPrompt}](${imageUrl})`;
       return NextResponse.json({ reply: replyText });
     }
 
