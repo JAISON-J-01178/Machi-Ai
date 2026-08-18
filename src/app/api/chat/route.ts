@@ -154,24 +154,43 @@ export async function POST(req: Request) {
 
     // ── 3. EXPANDED MULTI-PROVIDER FAILOVER POOL ─────────────────────────────
     const providers = [
-      // Groq Provider Pool (Ultra Fast)
+      // Groq Provider Pool (Ultra Fast - Live Verified Models)
       {
-        name: 'Groq Llama 3.3 70B',
+        name: 'Groq Compound',
         url: 'https://api.groq.com/openai/v1/chat/completions',
         apiKey: process.env.GROQ_API_KEY || '',
-        model: 'llama-3.3-70b-versatile'
+        model: 'groq/compound'
       },
       {
-        name: 'Groq Llama 3 8B',
+        name: 'Groq Compound Mini',
         url: 'https://api.groq.com/openai/v1/chat/completions',
         apiKey: process.env.GROQ_API_KEY || '',
-        model: 'llama3-8b-8192'
+        model: 'groq/compound-mini'
       },
       {
-        name: 'Groq Mixtral',
+        name: 'Groq Qwen 3.6',
         url: 'https://api.groq.com/openai/v1/chat/completions',
         apiKey: process.env.GROQ_API_KEY || '',
-        model: 'mixtral-8x7b-32768'
+        model: 'qwen/qwen3.6-27b'
+      },
+      {
+        name: 'Groq GPT OSS 120B',
+        url: 'https://api.groq.com/openai/v1/chat/completions',
+        apiKey: process.env.GROQ_API_KEY || '',
+        model: 'openai/gpt-oss-120b'
+      },
+      // OpenRouter Provider Pool (Live Verified Models)
+      {
+        name: 'OpenRouter Auto',
+        url: 'https://openrouter.ai/api/v1/chat/completions',
+        apiKey: process.env.OPENROUTER_API_KEY || '',
+        model: 'openrouter/auto'
+      },
+      {
+        name: 'OpenRouter Meta Llama 3.3',
+        url: 'https://openrouter.ai/api/v1/chat/completions',
+        apiKey: process.env.OPENROUTER_API_KEY || '',
+        model: 'meta-llama/llama-3.3-70b-instruct:free'
       },
       // OpenAI Provider
       {
@@ -179,25 +198,6 @@ export async function POST(req: Request) {
         url: 'https://api.openai.com/v1/chat/completions',
         apiKey: process.env.OPENAI_API_KEY || '',
         model: 'gpt-4o-mini'
-      },
-      // OpenRouter Provider Pool (Free Tier)
-      {
-        name: 'OpenRouter Llama 3.3',
-        url: 'https://openrouter.ai/api/v1/chat/completions',
-        apiKey: process.env.OPENROUTER_API_KEY || '',
-        model: 'meta-llama/llama-3.3-70b-instruct:free'
-      },
-      {
-        name: 'OpenRouter Gemini Flash Lite',
-        url: 'https://openrouter.ai/api/v1/chat/completions',
-        apiKey: process.env.OPENROUTER_API_KEY || '',
-        model: 'google/gemini-2.0-flash-lite-preview-02-05:free'
-      },
-      {
-        name: 'OpenRouter DeepSeek R1',
-        url: 'https://openrouter.ai/api/v1/chat/completions',
-        apiKey: process.env.OPENROUTER_API_KEY || '',
-        model: 'deepseek/deepseek-r1:free'
       }
     ];
 
