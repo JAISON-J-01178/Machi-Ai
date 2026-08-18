@@ -33,9 +33,7 @@ import {
   Loader2,
   RefreshCw,
   Sparkles,
-  Heart,
   Code,
-  Globe,
   Menu,
   LogIn,
   LogOut,
@@ -133,7 +131,7 @@ function MachiApp() {
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string>('');
   const [input, setInput] = useState('');
-  const [language, setLanguage] = useState('auto');
+  const [language] = useState('auto');
   const [isLoading, setIsLoading] = useState(false);
   const [threadsLoading, setThreadsLoading] = useState(false);
   const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null);
